@@ -6,7 +6,6 @@ from scipy.signal import butter, filtfilt
 from scipy.fft import fft
 import base64
 import io
-import os
 from PIL import Image
 
 app = Flask(__name__)
@@ -15,6 +14,7 @@ CORS(app)
 # Cargamos el clasificador Haar para la detección de rostros
 face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
 
+# Filtro de paso de banda para la señal
 def butter_bandpass(lowcut, highcut, fs, order=5):
     nyq = 0.5 * fs
     low = lowcut / nyq
@@ -30,33 +30,38 @@ def bandpass_filter(data, lowcut, highcut, fs, order=5):
 @app.route('/process_frame', methods=['POST'])
 def process_frame():
     try:
-        # Obtenemos la imagen en Base64
+        # Obtenemos la imagen en Base64 desde la solicitud
         data = request.json['image']
         img_bytes = base64.b64decode(data)
         
-        # Convertimos a una imagen compatible con OpenCV
+        # Convertimos la imagen de Base64 a un formato compatible con OpenCV
         image = Image.open(io.BytesIO(img_bytes))
         frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
         # Convertimos la imagen a escala de grises
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-        # Detectamos el rostro ajustando los parámetros
-        faces = face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(30, 30))
+        # Detección de rostros
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.05,  # Ajuste de precisión
+            minNeighbors=5,    # Reducir falsos positivos
+            minSize=(50, 50)   # Tamaño mínimo del rostro
+        )
 
         if len(faces) == 0:
-            # Si no se detecta rostro, devolvemos un mensaje de error
+            # No se detecta rostro
             return jsonify({'bpm': 'No se detecta el rostro'})
 
-        # Si se detecta el rostro, tomamos la región de interés (por ejemplo, la frente)
+        # Procesamos la región de interés (frente) en el rostro detectado
         for (x, y, w, h) in faces:
-            roi = gray[y:y+h//3, x:x+w]  # Región superior del rostro para BPM
+            roi = gray[y:y+h//3, x:x+w]  # Solo la parte superior del rostro para la señal
 
         # Convertimos la región de interés en un vector para calcular el BPM
         signal = roi.mean(axis=0).flatten()
         
-        # Filtramos la señal con un filtro de paso de banda
-        fs = 30.0  # Supuesto de frecuencia de muestreo
+        # Aplicamos el filtro de paso de banda a la señal
+        fs = 30.0  # Ajustar según la frecuencia de muestreo real
         lowcut = 0.75
         highcut = 3.0
         filtered_signal = bandpass_filter(signal, lowcut, highcut, fs, order=5)
@@ -67,11 +72,11 @@ def process_frame():
         fft_signal = fft(filtered_signal)
         fft_amplitude = np.abs(fft_signal)
 
-        # Obtenemos el BPM como la frecuencia dominante
+        # Obtenemos el BPM como la frecuencia dominante en el espectro
         idx = np.argmax(fft_amplitude)
         bpm = freqs[idx] * 60.0
 
-        # Limitamos el rango de BPM a valores realistas
+        # Limitamos el BPM a valores fisiológicamente realistas
         if bpm < 40 or bpm > 180:
             return jsonify({'bpm': 'Rango no válido'})
 
