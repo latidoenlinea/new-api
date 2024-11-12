@@ -6,7 +6,7 @@ from scipy.signal import butter, filtfilt
 from scipy.fft import fft
 import base64
 import io
-import os  # Asegúrate de que esta línea esté al principio
+import os
 from PIL import Image
 
 app = Flask(__name__)
@@ -39,14 +39,15 @@ def process_frame():
         image = Image.open(io.BytesIO(img_bytes))
         frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
 
-        # Convertimos la imagen a escala de grises
+        # Convertimos la imagen a escala de grises y aplicamos ecualización de histograma
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        gray = cv2.equalizeHist(gray)  # Mejora el contraste para la detección de rostros
 
-        # Detección de rostros
+        # Detección de rostros con parámetros ajustados
         faces = face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.05,  # Ajuste de precisión
-            minNeighbors=5,    # Reducir falsos positivos
+            minNeighbors=6,    # Reducir falsos positivos
             minSize=(50, 50)   # Tamaño mínimo del rostro
         )
 
@@ -89,3 +90,4 @@ def process_frame():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+
