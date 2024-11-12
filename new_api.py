@@ -6,6 +6,7 @@ from scipy.signal import butter, filtfilt
 from scipy.fft import fft
 import base64
 import io
+import os  # Asegúrate de que esta línea esté al principio
 from PIL import Image
 
 app = Flask(__name__)
