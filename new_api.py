@@ -46,18 +46,18 @@ def process_frame():
         # Detección de rostros con parámetros ajustados
         faces = face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.05,  
-            minNeighbors=5,   
-            minSize=(50, 50)
+            scaleFactor=1.05,  # Ajuste de precisión
+            minNeighbors=6,    # Reducir falsos positivos
+            minSize=(50, 50)   # Tamaño mínimo del rostro
         )
 
         if len(faces) == 0:
             # No se detecta rostro
-            return jsonify({'bpm': 'No se detecta el rostro'}), 200
+            return jsonify({'bpm': 'No se detecta el rostro'})
 
         # Procesamos la región de interés (frente) en el rostro detectado
         for (x, y, w, h) in faces:
-            roi = gray[y:y+h//3, x:x+w]
+            roi = gray[y:y+h//3, x:x+w]  # Solo la parte superior del rostro para la señal
 
         # Convertimos la región de interés en un vector para calcular el BPM
         signal = roi.mean(axis=0).flatten()
