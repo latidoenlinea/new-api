@@ -66,10 +66,9 @@ def process_frame():
         # Detección de rostros con parámetros ajustados
         faces = face_cascade.detectMultiScale(
             gray,
-            scaleFactor=1.1,  # Aumenta la precisión (menos falsos positivos)
-            minNeighbors=5,   # Ajuste de vecinos mínimos
-            minSize=(50, 50), # Tamaño mínimo del rostro
-            maxSize=(500, 500) # Tamaño máximo del rostro
+            scaleFactor=1.05,  # Ajuste de precisión
+            minNeighbors=6,    # Reducir falsos positivos
+            minSize=(50, 50)   # Tamaño mínimo del rostro
         )
 
         if len(faces) == 0:
