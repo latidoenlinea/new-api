@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+  from flask import Flask, request, jsonify
 from flask_cors import CORS
 import cv2
 import numpy as np
@@ -28,6 +28,17 @@ def bandpass_filter(data, lowcut, highcut, fs, order=5):
     y = filtfilt(b, a, data)
     return y
 
+# Filtro de suavizado gaussiano para reducir el ruido
+def apply_smoothing(frame):
+    return cv2.GaussianBlur(frame, (5, 5), 0)
+
+# Función para ajustar brillo y contraste de la imagen
+def adjust_brightness_contrast(image, brightness=30, contrast=30):
+    # Ajuste de brillo y contraste
+    image = np.array(image)
+    new_image = cv2.convertScaleAbs(image, alpha=contrast/127+1, beta=brightness-contrast)
+    return new_image
+
 @app.route('/process_frame', methods=['POST'])
 def process_frame():
     try:
@@ -38,6 +49,15 @@ def process_frame():
         # Convertimos la imagen de Base64 a un formato compatible con OpenCV
         image = Image.open(io.BytesIO(img_bytes))
         frame = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
+
+        # Mejora de la resolución (redimensionar la imagen para mejorar la calidad)
+        frame = cv2.resize(frame, (800, 600))  # Puedes ajustar la resolución según sea necesario
+
+        # Aplicamos el filtro de suavizado
+        frame = apply_smoothing(frame)
+
+        # Ajuste de brillo y contraste
+        frame = adjust_brightness_contrast(frame, brightness=30, contrast=30)
 
         # Convertimos la imagen a escala de grises y aplicamos ecualización de histograma
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
